@@ -1,0 +1,32 @@
+Index: 8162129 entries, 0 to 8688525
+Data columns (total 26 columns):
+ #   Column      Dtype  
+---  ------      -----  
+ 0   交易序號        object 
+ 1   授權日期        int64  
+ 2   授權時間        int64  
+ 3   顧客ID        object 
+ 4   交易卡號        object 
+ 5   交易類別        int64  
+ 6   交易型態        float64
+ 7   特店代號        object 
+ 8   收單行代碼       object 
+ 9   mcc_code    float64
+ 10  交易金額-台幣     float64
+ 11  網路交易註記      int64  
+ 12  是否分期交易      int64  
+ 13  分期期數        float64
+ 14  是否紅利交易      int64  
+ 15  實付金額        int64  
+ 16  消費地國別       float64
+ 17  消費城市        float64
+ 18  狀態碼         float64
+ 19  超額註記碼       int64  
+ 20  Fallback註記  int64  
+ 21  支付型態        float64
+ 22  消費地幣別       float64
+ 23  消費地金額       int64  
+ 24  3D交易註記      int64  
+ 25  盜刷與否        int64  
+dtypes: float64(9), int64(12), object(5)
+memory usage: 1.6+ GB
