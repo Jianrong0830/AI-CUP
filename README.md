@@ -18,4 +18,4 @@
 
 ## 注意事項  
 1.資料夾、檔名需一至  
-2.將主辦方提供之training.csv放到dataset_1st資料夾中  
+2.將訓練資料集training.csv放到dataset_1st資料夾中  
