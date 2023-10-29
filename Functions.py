@@ -4,121 +4,118 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy.stats import skew, kurtosis
 from sklearn.preprocessing import StandardScaler
-from imblearn.over_sampling import SMOTE
+from sklearn.model_selection import train_test_split
 import warnings
 warnings.filterwarnings("ignore")
 
-class Categorize:
+class DateTimeConvert:
     def categorize_date(date):
-        if date <= 13: return 1
-        elif date > 13 and date <= 27: return 2
-        elif date > 27 and date <= 41: return 3
-        else: return 4
+        return date // 10 + 1
         
     def categorize_time(time):
-        if time <= 110813: return 1
-        elif time > 110813 and time <= 150940: return 2
-        elif time > 150940 and time <= 185427: return 3
-        else: return 4
+        return time // 21600 + 1
+        
+    def to_sec(time):
+        time_str = str(time)
+        time_str = time_str.zfill(6)
+        h = int(time_str[:2])
+        m = int(time_str[2:4])
+        s = int(time_str[4:])
+        s += h*60*60 + m*60
+        return s
 
 class Process:
     def clean():
         data_path='C:/dataset_1st/training.csv'
         data=pd.read_csv(data_path)
         
+        # 狀態碼空值補0
         data['stscd'].fillna(0, inplace=True)
+        
+        # 刪除其他空值列
         data.dropna(inplace=True)
 
+        # 轉換中文欄位
         columns_path='C:/dataset_1st/columns.csv'
         columns=pd.read_csv(columns_path)['訓練資料欄位中文說明']
         data.columns = columns
+        
+        # 刪除ID類欄位
+        data.drop(['交易序號', '顧客ID', '交易卡號', '特店代號', '收單行代碼'], axis=1, inplace=True)
 
         data.to_csv('C:/dataset_1st/training_cleaned.csv', encoding='utf-8-sig', index=False)
-        print(data)
+        #print(data)
         
     def process1():
         data_path='C:/dataset_1st/training_cleaned.csv'
         data=pd.read_csv(data_path)
         
-        data['分期期數_指示'] = (data['分期期數'] == 0).astype(int)
-        data['消費地國別_指示'] = (data['消費地國別'] == 0).astype(int)
-        data['日期區段'] = data['授權日期'].apply(Categorize.categorize_date)
-        data['時間區段'] = data['授權時間'].apply(Categorize.categorize_time)
+        # 授權時間轉換為秒數
+        data['授權時間'] = data['授權時間'].apply(DateTimeConvert.to_sec)
         
-        data.to_csv('C:/dataset_1st/training_p1.csv', encoding='utf-8-sig', index=False)
-        print(data)
+        # 建立指示變數：分期期數_指示
+        data['分期期數_指示'] = (data['分期期數'] == 0).astype(int)
+        
+        data.to_csv('C:/dataset_1st/training_process1.csv', encoding='utf-8-sig', index=False)
+        #print(data)
         
     def process2():
-        data_path='C:/dataset_1st/training_p1.csv'
+        data_path='C:/dataset_1st/training_process1.csv'
         data=pd.read_csv(data_path)
         
-        data.drop('授權日期', axis=1, inplace=True)
-        data.drop('授權時間', axis=1, inplace=True)
-        data.drop('是否分期交易', axis=1, inplace=True)
-        data.drop('分期期數', axis=1, inplace=True)
-        data.drop('實付金額', axis=1, inplace=True)
-        data.drop('消費地國別', axis=1, inplace=True)
+        # 切分日期區段、時間區段
+        data['日期區段'] = data['授權日期'].apply(DateTimeConvert.categorize_date)
+        data['時間區段'] = data['授權時間'].apply(DateTimeConvert.categorize_time)
         
-        data.to_csv('C:/dataset_1st/training_p2.csv', encoding='utf-8-sig', index=False)
-        print(data)
+        data.to_csv('C:/dataset_1st/training_process2.csv', encoding='utf-8-sig', index=False)
+        #print(data)
         
     def process3():
-        data_path='C:/dataset_1st/training_p2.csv'
+        data_path='C:/dataset_1st/training_process2.csv'
         data=pd.read_csv(data_path)
         
-        interaction_features = [
-            ['交易金額-台幣', '交易類別'],
-            ['交易金額-台幣', '網路交易註記'],
-            ['時間區段', '交易類別'],
-            ['消費地國別_指示', '交易金額-台幣']]
-
-        for feature_pair in interaction_features:
-            interaction_term = f"{feature_pair[0]}_X_{feature_pair[1]}"
-            data[interaction_term] = data[feature_pair[0]] * data[feature_pair[1]]
-            
-        poly_features = ['交易金額-台幣', '交易類別']
-        for i in poly_features:
-            data[i+'(平方)'] = data[i] * data[i]
-        
-        data.to_csv('C:/dataset_1st/training_p3.csv', encoding='utf-8-sig', index=False)
-        print(data)
-        
-    def preparatory():
-        data_path='C:/dataset_1st/training_p3.csv'
-        data=pd.read_csv(data_path)
-        print("讀取完成")
+        all_features = set(data.columns.tolist()) - set(["盜刷與否"])
+        log_transform_features = ["交易金額-台幣", "分期期數", "實付金額", "消費地金額"]
+        quantitive_features = ["授權日期", "授權時間", "交易金額-台幣", "分期期數", "實付金額", "消費地金額"]
+        remaining_features = list(all_features - set(quantitive_features))
         
         # 偏度或峰度過高變數：對數轉換
-        features = data.columns
-        skewness = data.apply(lambda x: skew(x.dropna()), axis=0)
-        kurtosis = data.apply(lambda x: kurtosis(x.dropna()), axis=0)
-        
-        high_skew_features = [feature for feature, value in zip(features, skewness) if np.abs(value) > 1]
-        high_kurt_features = [feature for feature, value in zip(features, kurtosis) if np.abs(value) > 3]
-        log_transform_features = list(set(high_skew_features + high_kurt_features))
-        print("log_transform_features:", log_transform_features)
-        
         for feature in log_transform_features:
-            data[feature] = np.log1p(data[feature])
-            
-        # 常態分佈變數：標準化
-        features = data.columns
-        skewness = data.apply(lambda x: skew(x.dropna()), axis=0)
-        kurtosis = data.apply(lambda x: kurtosis(x.dropna()), axis=0)
+            new_feature_name = f"{feature}(對數)"
+            quantitive_features[quantitive_features.index(feature)] = new_feature_name
+            data[new_feature_name] = np.log1p(data[feature])
+            data.drop([feature], axis=1, inplace=True)
         
-        normal_skew_features = [feature for feature, value in zip(features, skewness) if np.abs(value) < 0.5]
-        normal_kurt_features = [feature for feature, value in zip(features, kurtosis) if np.abs(value - 3) < 1]
-        normal_dist_features = list(set(normal_skew_features + normal_kurt_features))
-        print("normal_dist_features: ", normal_dist_features)
-
+        # 資料標準化
         scaler = StandardScaler()
-        data[normal_dist_features] = scaler.fit_transform(data[normal_dist_features])
+        data_scaled = scaler.fit_transform(data[quantitive_features])
+        
+        new_columns = []
+        for feature in quantitive_features:
+            new_columns.append(f"{feature}(標準化)")
+        
+        data_scaled_df = pd.DataFrame(data_scaled, columns=new_columns)
+        data_remaining_df = data[remaining_features]
+        
+        temp = pd.concat([data_scaled_df,  data_remaining_df], axis=1)
+        data = pd.concat([temp, data['盜刷與否']], axis=1)
         
         # 刪除空值列(再次確認)
         data.dropna(inplace=True)
         
+        data.to_csv('C:/dataset_1st/training_process3.csv', encoding='utf-8-sig', index=False)
+        #print(data)
+        
+    def preparatory():
+        data_path='C:/dataset_1st/training_process3.csv'
+        data=pd.read_csv(data_path)
+        
+        data.drop(['實付金額(對數)(標準化)', '消費地金額(對數)(標準化)', '是否分期交易'], axis=1, inplace=True)
+        
+        data.dropna(inplace=True)
+        
         data.to_csv('C:/dataset_1st/training_preparatory.csv', encoding='utf-8-sig', index=False)
-        print(data)
+        #print(data)
         
 
 class Analyze:
@@ -128,12 +125,15 @@ class Analyze:
         
     def summary(self):
         print("摘要:")
-        file_name = "{}/摘要.txt".format(self.folder )
-        file_mode = "w"
-        file = open(file_name, file_mode)
-        file.write(str(self.data.info()))
-        file.close()
-        print(self.data.info(), '\n')
+        info_df = pd.DataFrame(columns=['特徵', '資料型態', '非空值數量'])
+        for col in self.data.columns:
+            dtype = self.data[col].dtype
+            non_null_count = self.data[col].count()
+            new_row = pd.DataFrame({'特徵': [col], '資料型態': [dtype], '非空值數量': [non_null_count]})
+            info_df = pd.concat([info_df, new_row], ignore_index=True)
+        
+        info_df.to_csv('{}/摘要.csv'.format(self.folder), encoding="utf_8_sig")
+        print(info_df, '\n')
 
     def describe(self):
         print("敘述統計:")
@@ -155,7 +155,6 @@ class Analyze:
         print("相關係數矩陣:")
         numerical_features = self.data.select_dtypes(include=['number'])
         correlation_matrix_numerical = numerical_features.corr()
-        #correlation_with_label_numerical = correlation_matrix_numerical["盜刷與否"].sort_values(ascending=False)
         correlation_matrix_numerical.to_csv('{}/相關係數矩陣.csv'.format(self.folder), encoding="utf_8_sig")
         print(correlation_matrix_numerical, '\n')
     
@@ -166,4 +165,3 @@ class Analyze:
         plt.title("相關係數矩陣")
         plt.savefig("{}/相關係數矩陣.png".format(self.folder))
         plt.show()
-    
