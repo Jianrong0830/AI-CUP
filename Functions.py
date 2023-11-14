@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from joblib import dump
 import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy.stats import skew, kurtosis
@@ -89,6 +90,7 @@ class Process:
         # 資料標準化
         scaler = StandardScaler()
         data_scaled = scaler.fit_transform(data[quantitive_features])
+        dump(scaler, 'scalers/scaler1.joblib') 
         
         new_columns = []
         for feature in quantitive_features:

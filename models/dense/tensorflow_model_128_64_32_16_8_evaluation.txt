@@ -1,0 +1,8 @@
+Loss：0.09686168283224106
+Accuracy：0.9964886903762817
+Precision：0.5565805435180664
+Recall：0.4320496618747711
+AUC：0.9343584775924683
+F1：0.486471957505091
+param：
+{'noise_factor': 0.05, 'smote_batch_size': 100000, 'dense_input': 128, 'dense_1': 64, 'dense_2': 32, 'dense_3': 16, 'dense_4': 8, 'learning_rate': 0.001, 'decay': 1e-06, 'cost_0': 55, 'cost_1': 1, 'epochs': 10, 'train_batch_size': 1024}
